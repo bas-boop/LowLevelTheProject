@@ -4,7 +4,7 @@
 
 int main()
 {
-    short what_program = 2;
+    short what_program = 1;
 
 	if (what_program == 0)
 	{
