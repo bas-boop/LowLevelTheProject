@@ -100,71 +100,63 @@ void Crisis::updateBalls(const sf::Vector2u& windowSize, float deltaTime)
         ball.shape.move(ball.velocity * deltaTime);
     }*/
 
-    std::ranges::for_each(betterBalls, [&deltaTime](Ball ball)
-    {
-        ball.shape.move(ball.velocity * deltaTime);
+    std::set<Ball> newSet;
 
-        return;
-        if (ball.shape.getFillColor() == sf::Color::Red)
-            std::cout << ball.shape.getPosition().x << " " << ball.shape.getPosition().y << '\n';
+    std::ranges::for_each(betterBalls, [&](const Ball& ball) {
+        Ball newBall = ball;
+        newBall.shape.move(newBall.velocity * deltaTime);
+        newSet.insert(std::move(newBall));
     });
 
-    std::ranges::for_each(betterBalls, [&](Ball ball1)
-    {
-        std::ranges::for_each(betterBalls, [&](Ball ball2)
-        {            
+    betterBalls = std::move(newSet);
+
+    std::vector<Ball> tempBalls(betterBalls.begin(), betterBalls.end());
+
+    // collision detection
+    std::ranges::for_each(tempBalls, [&](Ball& ball1) {
+        std::ranges::for_each(tempBalls, [&](Ball& ball2) {
             if (ball1.id == ball2.id)
-            {
-                //std::cout << "same\n";
                 return;
-            }
-            else
-            {
-                //std::cout << "not same\n";
-            }
 
             const sf::Vector2f pos1 = ball1.shape.getPosition();
             const sf::Vector2f pos2 = ball2.shape.getPosition();
             const float radius1 = ball1.shape.getRadius();
             const float radius2 = ball2.shape.getRadius();
-            
-            // Calculate distance between centers
+
             sf::Vector2f delta = pos2 - pos1;
             const float distance = std::sqrt(delta.x * delta.x + delta.y * delta.y);
             const float minDistance = radius1 + radius2;
-            
-            if (distance < minDistance && distance > 0)
-            {
-                //std::cout << "bounce\n";
-                
+
+            if (distance < minDistance && distance > 0) {
                 // Normalize collision vector
                 sf::Vector2f normal = delta / distance;
-                
-                // Separate balls to prevent overlap
+
+                // Separate balls
                 float overlap = minDistance - distance;
                 sf::Vector2f separation = normal * (overlap * 0.5f);
                 ball1.shape.setPosition(pos1 - separation);
                 ball2.shape.setPosition(pos2 + separation);
-                
-                // Calculate relative velocity
+
+                // Relative velocity
                 sf::Vector2f relativeVel = ball2.velocity - ball1.velocity;
                 float velAlongNormal = relativeVel.x * normal.x + relativeVel.y * normal.y;
 
-                // Don't resolve if velocities are separating
                 if (velAlongNormal > 0)
                     return;
-                
-                // Apply collision response (elastic collision)
-                float restitution = 0.0f; // Bounce factor (0 = no bounce, 1 = perfect bounce)
+
+                float restitution = 0.0f; // bounce factor
                 float impulse = -(1 + restitution) * velAlongNormal;
-                
-                // Assume equal mass for simplicity
+
                 sf::Vector2f impulseVector = impulse * normal;
                 ball1.velocity -= impulseVector;
                 ball2.velocity += impulseVector;
-            }    
+            }
         });
     });
+
+    // rebuild the set with updated balls
+    betterBalls.clear();
+    betterBalls.insert(tempBalls.begin(), tempBalls.end());
     
     // Handle ball-to-ball collisions
     /*for (size_t i = 0; i < balls.size(); ++i)
@@ -209,46 +201,39 @@ void Crisis::updateBalls(const sf::Vector2u& windowSize, float deltaTime)
     
     // Handle wall collisions
 
-    std::ranges::for_each(betterBalls, [&](Ball ball)
+    std::vector<Ball> wallBalls(betterBalls.begin(), betterBalls.end());
+
+    std::ranges::for_each(wallBalls, [&](Ball& ball)
     {
         sf::Vector2f pos = ball.shape.getPosition();
         float radius = ball.shape.getRadius();
-        
-        // Bounce off walls
-        if (pos.x - radius <= 0 || pos.x + radius >= windowSize.x)
-        {
+
+        // Bounce off vertical walls
+        if (pos.x - radius <= 0 || pos.x + radius >= windowSize.x) {
             ball.velocity.x = -ball.velocity.x;
-            
-            // Clamp position to prevent sticking
-            if (pos.x - radius <= 0)
-            {
+
+            if (pos.x - radius <= 0) {
                 ball.shape.setPosition(sf::Vector2f(radius, pos.y));
-            }
-            else
-            {
+            } else {
                 ball.shape.setPosition(sf::Vector2f(windowSize.x - radius, pos.y));
             }
-
-            std::cout << "Vertical swap\n";
         }
-        
-        if (pos.y - radius <= 0 || pos.y + radius >= windowSize.y)
-        {
+
+        // Bounce off horizontal walls
+        if (pos.y - radius <= 0 || pos.y + radius >= windowSize.y) {
             ball.velocity.y = -ball.velocity.y;
-            
-            // Clamp position to prevent sticking
-            if (pos.y - radius <= 0)
-            {
+
+            if (pos.y - radius <= 0) {
                 ball.shape.setPosition(sf::Vector2f(pos.x, radius));
-            }
-            else
-            {
+            } else {
                 ball.shape.setPosition(sf::Vector2f(pos.x, windowSize.y - radius));
             }
-
-            std::cout << "Horizontal swap\n";
         }
     });
+
+    // rebuild the set
+    betterBalls.clear();
+    betterBalls.insert(wallBalls.begin(), wallBalls.end());
     
     /*for (auto& ball : balls)
     {
