@@ -68,21 +68,48 @@ Exploring::Exploring()
         
         std::cout << "\nno duplicates\n\n";
     }
-return;
 
     // verwijder alle negatieve elementen
     {
         std::vector<double> numbers{10, 324422, 6, -23, 234.5, 654.1, 3.1242, -9.23, 635};
+        std::vector<double> non_negative_numbers;
+
+        std::ranges::copy_if(numbers, std::ostream_iterator<double>(std::cout, " "),
+                         [](const double x){ return x > 0; });
+
+        std::cout << "\nno negative numbers\n\n";
     }
 
     // bepaal voor alle elementen of ze even of oneven zijn
     {
-        std::vector numbers{10, 324422, 6, -23, 234, 654, 3, -9, 635};
-    }
+        std::vector numbers{10, 324422, 6, -23, -24, 234, 654, 3, -9, 635};
 
+        std::ranges::copy_if(numbers, std::ostream_iterator<double>(std::cout, " "),
+                         [](const int x){ return (x % 2) == 0; });
+
+        std::cout << "\n";
+
+        std::ranges::copy_if(numbers, std::ostream_iterator<double>(std::cout, " "),
+                         [](const int x){ return (x % 2) != 0; });
+
+        std::cout << "\neven and odd numbers\n\n";
+    }
+    
     // bepaal de som, het gemiddelde, en het product van alle getallen te berekenen
     {
         std::vector<double> numbers{10, 324422.1, 6, -23, 234.5, 654.1, 3.1242, -9.23, 635};
+
+        auto result0 = std::ranges::for_each(numbers, [](double num) {
+            
+        });
+        auto result1 = std::ranges::for_each(numbers, [](double num) {
+            
+        });
+        auto result2 = std::ranges::for_each(numbers, [](double num) {
+            
+        });
+        
+        std::cout << "\nmath\n\n";
     }
 }
 
