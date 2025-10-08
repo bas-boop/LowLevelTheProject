@@ -8,11 +8,6 @@
 #include <random>
 
 #include <algorithm>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <string_view>
-#include <set>
 #include <unordered_set>
 
 Crisis::Crisis()
@@ -32,8 +27,9 @@ Crisis::Crisis()
     radiusDist = std::uniform_real_distribution<float>(2.5f, 7.5f);
 
     balls = std::vector<Ball>();
-    
     balls.reserve(2500);
+    grid.reserve(2500);
+    
     for (int i = 0; i < 2500; ++i)
     {
         const float x = posDist(gen);
@@ -88,6 +84,7 @@ Crisis::~Crisis()
 void Crisis::updateBalls(const sf::Vector2u& windowSize, float deltaTime)
 {
     moveBalls(deltaTime);
+    buildSpatialGrid();
     handleCollisions(windowSize);
 }
 
@@ -186,7 +183,7 @@ void Crisis::handleCollisions(const sf::Vector2u& windowSize)
 void Crisis::buildSpatialGrid()
 {
     grid.clear();
-
+    
     for (size_t i = 0; i < balls.size(); i++)
     {
         const auto& b = balls[i];

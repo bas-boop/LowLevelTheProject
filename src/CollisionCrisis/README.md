@@ -15,3 +15,7 @@ third time running (changed set back to vector):
 fourth time running (with spacial hashing, but broke collision)
 * 82 FPS
 * 2500 balls
+
+fith time running (with spacial hashing, forgot the call `buildSpatialGrid()`)
+* 71 FPS
+* 2500 balls

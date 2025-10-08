@@ -1,19 +1,10 @@
 ﻿#pragma once
 
 #include "imgui-SFML.h"
-#include "imgui.h"
 #include <SFML/Graphics.hpp>
 
 #include <vector>
 #include <random>
-
-#include <algorithm>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <string_view>
-#include <set>
-#include <unordered_set>
 
 struct Ball;
 
@@ -32,7 +23,7 @@ private:
 
     std::chrono::high_resolution_clock::time_point start;
     std::chrono::high_resolution_clock::time_point end;
-    float fps;
+    float fps = 0;
     
     std::vector<Ball> balls;
     std::unordered_map<int, std::vector<int>> grid;
@@ -59,7 +50,7 @@ struct Ball
         shape.setRadius(radius);
         shape.setPosition(sf::Vector2f(x, y));
         shape.setFillColor(color);
-        shape.setOrigin(sf::Vector2f(radius, radius)); // Center origin
+        shape.setOrigin(sf::Vector2f(radius, radius));
         velocity = sf::Vector2f(vx, vy);
     }
 
