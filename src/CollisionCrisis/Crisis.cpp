@@ -31,41 +31,30 @@ Crisis::Crisis()
     colorDist = std::uniform_int_distribution<int>(0, 255);
     radiusDist = std::uniform_real_distribution<float>(2.5f, 7.5f);
 
-    betterBalls = std::set<Ball>();
+    balls = std::vector<Ball>();
     
-    // Generate random balls
+    balls.reserve(2500);
     for (int i = 0; i < 2500; ++i)
     {
-        sf::Color randomColor(colorDist(gen), colorDist(gen), colorDist(gen));
+        const float x = posDist(gen);
+        const float y = posDist(gen);
+        const float radius = radiusDist(gen);
+        const auto color = sf::Color (colorDist(gen), colorDist(gen), colorDist(gen));
+        const float vx = velDist(gen);
+        const float vy = velDist(gen);
 
-        if (i == 0)
-            randomColor = sf::Color::Red;
-
-        betterBalls.emplace(
-            i, // id
-            posDist(gen), posDist(gen), // position
-            radiusDist(gen), // radius
-            randomColor, // color
-            velDist(gen), velDist(gen) // velocity
-        );
-        
-        /*balls.emplace_back(
-            posDist(gen), posDist(gen), // position
-            radiusDist(gen), // radius
-            randomColor, // color
-            velDist(gen), velDist(gen) // velocity
-        );*/
+        Ball b(i, x, y, radius, color, vx, vy);
+        balls.push_back(b);
     }
 
     sf::Clock deltaClock;
+    
     while (window.isOpen())
     {
-        // Event Polling
         while (const std::optional event = window.pollEvent())
         {
             ImGui::SFML::ProcessEvent(window, *event);
 
-            // "close requested" event: we close the window
             if (event->is<sf::Event::Closed>())
                 window.close();
         }
@@ -73,14 +62,18 @@ Crisis::Crisis()
         sf::Time dt = deltaClock.restart();
         ImGui::SFML::Update(window, dt);
 
-        // Render
         window.clear();
 
-        fps = 1.0f / dt.asSeconds();
+        if (dt.asSeconds() > 0.f)
+            fps = 1.f / dt.asSeconds();
 
         updateBalls(window.getSize(), dt.asSeconds());
         drawBalls(window);
-        ImGui::Begin("FPS Counter"); ImGui::Text("FPS: %.1f", fps); ImGui::End(); // fps is 100.000, something is going wrong
+        
+        ImGui::Begin("FPS Counter");
+        ImGui::Text("FPS: %.1f", fps);
+        ImGui::End();
+        
         ImGui::SFML::Render(window);
 
         window.display();
@@ -94,199 +87,120 @@ Crisis::~Crisis()
 
 void Crisis::updateBalls(const sf::Vector2u& windowSize, float deltaTime)
 {
-    // Update positions
-    /*for (auto& ball : balls)
+    moveBalls(deltaTime);
+    handleCollisions(windowSize);
+}
+
+void Crisis::moveBalls(const float deltaTime)
+{
+    std::ranges::for_each(balls, [&](Ball& ball)
     {
         ball.shape.move(ball.velocity * deltaTime);
-    }*/
-
-    std::set<Ball> newSet;
-
-    std::ranges::for_each(betterBalls, [&](const Ball& ball) {
-        Ball newBall = ball;
-        newBall.shape.move(newBall.velocity * deltaTime);
-        newSet.insert(std::move(newBall));
     });
+}
 
-    betterBalls = std::move(newSet);
+void Crisis::handleCollisions(const sf::Vector2u& windowSize)
+{
+    const float W = windowSize.x, H = windowSize.y;
 
-    std::vector<Ball> tempBalls(betterBalls.begin(), betterBalls.end());
-
-    // collision detection
-    std::ranges::for_each(tempBalls, [&](Ball& ball1) {
-        std::ranges::for_each(tempBalls, [&](Ball& ball2) {
-            if (ball1.id == ball2.id)
-                return;
-
-            const sf::Vector2f pos1 = ball1.shape.getPosition();
-            const sf::Vector2f pos2 = ball2.shape.getPosition();
-            const float radius1 = ball1.shape.getRadius();
-            const float radius2 = ball2.shape.getRadius();
-
-            sf::Vector2f delta = pos2 - pos1;
-            const float distance = std::sqrt(delta.x * delta.x + delta.y * delta.y);
-            const float minDistance = radius1 + radius2;
-
-            if (distance < minDistance && distance > 0) {
-                // Normalize collision vector
-                sf::Vector2f normal = delta / distance;
-
-                // Separate balls
-                float overlap = minDistance - distance;
-                sf::Vector2f separation = normal * (overlap * 0.5f);
-                ball1.shape.setPosition(pos1 - separation);
-                ball2.shape.setPosition(pos2 + separation);
-
-                // Relative velocity
-                sf::Vector2f relativeVel = ball2.velocity - ball1.velocity;
-                float velAlongNormal = relativeVel.x * normal.x + relativeVel.y * normal.y;
-
-                if (velAlongNormal > 0)
-                    return;
-
-                float restitution = 0.0f; // bounce factor
-                float impulse = -(1 + restitution) * velAlongNormal;
-
-                sf::Vector2f impulseVector = impulse * normal;
-                ball1.velocity -= impulseVector;
-                ball2.velocity += impulseVector;
-            }
-        });
-    });
-
-    // rebuild the set with updated balls
-    betterBalls.clear();
-    betterBalls.insert(tempBalls.begin(), tempBalls.end());
-    
-    // Handle ball-to-ball collisions
-    /*for (size_t i = 0; i < balls.size(); ++i)
+    // Wall collisions
+    for (auto& b : balls)
     {
-        for (size_t j = i + 1; j < balls.size(); ++j)
+        if (b.shape.getPosition().x - b.shape.getRadius() < 0 || b.shape.getPosition().x + b.shape.getRadius() > W)
+            b.velocity.x = -b.velocity.x;
+        if (b.shape.getPosition().y - b.shape.getRadius() < 0 || b.shape.getPosition().y + b.shape.getRadius() > H)
+            b.velocity.y = -b.velocity.y;
+
+        float x = std::clamp(b.shape.getPosition().x, b.shape.getRadius(), W - b.shape.getRadius());
+        float y = std::clamp(b.shape.getPosition().y, b.shape.getRadius(), H - b.shape.getRadius());
+
+        sf::Vector2f a = {x, y};
+        b.shape.setPosition(a);
+    }
+
+    // Ball collisions using spatial hash
+    const std::array<std::array<int, 2>, 9> neighborOffsets = {{
+        {{-1, -1}}, {{0, -1}}, {{1, -1}},
+        {{-1,  0}}, {{0,  0}}, {{1,  0}},
+        {{-1,  1}}, {{0,  1}}, {{1,  1}}
+    }};
+
+    for (auto& [key, indices] : grid)
+    {
+        const int cellX = key % 10000;
+        const int cellY = key / 10000;
+
+        for (auto [ox, oy] : neighborOffsets)
         {
-            Ball& ball1 = balls[i];
-            Ball& ball2 = balls[j];
-            sf::Vector2f pos1 = ball1.shape.getPosition();
-            sf::Vector2f pos2 = ball2.shape.getPosition();
-            float radius1 = ball1.shape.getRadius();
-            float radius2 = ball2.shape.getRadius();
-            // Calculate distance between centers
-            sf::Vector2f delta = pos2 - pos1;
-            float distance = std::sqrt(delta.x * delta.x + delta.y * delta.y);
-            float minDistance = radius1 + radius2;
+            const int nx = cellX + ox;
+            const int ny = cellY + oy;
+            int neighbor_key = ny * 10000 + nx;
             
-            if (distance < minDistance && distance > 0)
-            {
-                // Normalize collision vector
-                sf::Vector2f normal = delta / distance;
-                // Separate balls to prevent overlap
-                float overlap = minDistance - distance;
-                sf::Vector2f separation = normal * (overlap * 0.5f);
-                ball1.shape.setPosition(pos1 - separation);
-                ball2.shape.setPosition(pos2 + separation);
-                // Calculate relative velocity
-                sf::Vector2f relativeVel = ball2.velocity - ball1.velocity;
-                float velAlongNormal = relativeVel.x * normal.x + relativeVel.y * normal.y;
-                // Don't resolve if velocities are separating
-                if (velAlongNormal > 0) continue;
-                // Apply collision response (elastic collision)
-                float restitution = 0.0f; // Bounce factor (0 = no bounce, 1 = perfect bounce)
-                float impulse = -(1 + restitution) * velAlongNormal;
-                // Assume equal mass for simplicity
-                sf::Vector2f impulseVector = impulse * normal;
-                ball1.velocity -= impulseVector;
-                ball2.velocity += impulseVector;
-            }
-        }
-    }*/
-    
-    // Handle wall collisions
+            if (!grid.contains(neighbor_key))
+                continue;
 
-    std::vector<Ball> wallBalls(betterBalls.begin(), betterBalls.end());
-
-    std::ranges::for_each(wallBalls, [&](Ball& ball)
-    {
-        sf::Vector2f pos = ball.shape.getPosition();
-        float radius = ball.shape.getRadius();
-
-        // Bounce off vertical walls
-        if (pos.x - radius <= 0 || pos.x + radius >= windowSize.x) {
-            ball.velocity.x = -ball.velocity.x;
-
-            if (pos.x - radius <= 0) {
-                ball.shape.setPosition(sf::Vector2f(radius, pos.y));
-            } else {
-                ball.shape.setPosition(sf::Vector2f(windowSize.x - radius, pos.y));
-            }
-        }
-
-        // Bounce off horizontal walls
-        if (pos.y - radius <= 0 || pos.y + radius >= windowSize.y) {
-            ball.velocity.y = -ball.velocity.y;
-
-            if (pos.y - radius <= 0) {
-                ball.shape.setPosition(sf::Vector2f(pos.x, radius));
-            } else {
-                ball.shape.setPosition(sf::Vector2f(pos.x, windowSize.y - radius));
-            }
-        }
-    });
-
-    // rebuild the set
-    betterBalls.clear();
-    betterBalls.insert(wallBalls.begin(), wallBalls.end());
-    
-    /*for (auto& ball : balls)
-    {
-        sf::Vector2f pos = ball.shape.getPosition();
-        float radius = ball.shape.getRadius();
-        // Bounce off walls
-        if (pos.x - radius <= 0 || pos.x + radius >= windowSize.x)
-        {
-            ball.velocity.x = -ball.velocity.x;
-            // Clamp position to prevent sticking
-            if (pos.x - radius <= 0)
-            {
-                ball.shape.setPosition(sf::Vector2f(radius, pos.y));
-            }
-            else
-            {
-                ball.shape.setPosition(sf::Vector2f(windowSize.x - radius,
-                pos.y));
-            }
-        }
-        if (pos.y - radius <= 0 || pos.y + radius >= windowSize.y)
-        {
-            ball.velocity.y = -ball.velocity.y;
+            auto& other = grid[neighbor_key];
             
-            // Clamp position to prevent sticking
-            if (pos.y - radius <= 0)
+            for (const int i : indices)
             {
-                ball.shape.setPosition(sf::Vector2f(pos.x, radius));
-            }
-            else
-            {
-                ball.shape.setPosition(sf::Vector2f(pos.x, windowSize.y - radius));
+                for (const int j : other)
+                {
+                    if (i >= j) continue;
+                    auto& a = balls[i];
+                    auto& b = balls[j];
+
+                    const sf::Vector2f delta = b.shape.getPosition() - a.shape.getPosition();
+                    const float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+
+                    if (const float minDist = a.shape.getRadius() + b.shape.getRadius(); dist < minDist && dist > 0.f)
+                    {
+                        const sf::Vector2f normal = delta / dist;
+                        const float overlap = (minDist - dist) * 0.5f;
+                        sf::Vector2f apos = a.shape.getPosition();
+                        sf::Vector2f bpos = b.shape.getPosition();
+
+                        apos -= normal * overlap;
+                        bpos += normal * overlap;
+
+                        a.shape.setPosition(apos);
+                        b.shape.setPosition(bpos);
+
+
+                        const sf::Vector2f relVel = b.velocity - a.velocity;
+                        const float velAlongNormal = relVel.x * normal.x + relVel.y * normal.y;
+
+                        if (velAlongNormal > 0)
+                            continue;
+
+                        const float impulse = -velAlongNormal;
+                        const sf::Vector2f impulseVec = impulse * normal;
+                        a.velocity -= impulseVec;
+                        b.velocity += impulseVec;
+                    }
+                }
             }
         }
-    }*/
+    }
+}
+
+void Crisis::buildSpatialGrid()
+{
+    grid.clear();
+
+    for (size_t i = 0; i < balls.size(); i++)
+    {
+        const auto& b = balls[i];
+        const int cellX = static_cast<int>(b.shape.getPosition().x / cellSize);
+        const int cellY = static_cast<int>(b.shape.getPosition().y / cellSize);
+        int key = cellY * 10000 + cellX;
+        grid[key].push_back(static_cast<int>(i));
+    }
 }
 
 void Crisis::drawBalls(sf::RenderWindow& window) const
 {
-    std::ranges::for_each(betterBalls, [&](const Ball& ball)
+    std::ranges::for_each(balls, [&](const Ball& ball)
         {
             window.draw(ball.shape);
-
-        return;
-        
-            if (ball.shape.getFillColor() == sf::Color::Red)
-                std::cout << ball.shape.getPosition().x << " " << ball.shape.getPosition().y << '\n';
-
         });
-    
-    return;
-    
-    for (const auto& ball : balls) {
-        window.draw(ball.shape);
-    }
 }

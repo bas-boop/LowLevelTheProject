@@ -25,6 +25,9 @@ public:
 
 private:
     void updateBalls(const sf::Vector2u& windowSize, float deltaTime);
+    void moveBalls(const float deltaTime);
+    void handleCollisions(const sf::Vector2u& windowSize);
+    void buildSpatialGrid();
     void drawBalls( sf::RenderWindow& window ) const;
 
     std::chrono::high_resolution_clock::time_point start;
@@ -32,8 +35,9 @@ private:
     float fps;
     
     std::vector<Ball> balls;
-    std::set<Ball> betterBalls; // gives Error C2676
-    //std::unordered_set<Ball> betsBalls;
+    std::unordered_map<int, std::vector<int>> grid;
+
+    float cellSize = 32.0f;
     
     std::random_device rd;
     std::mt19937 gen;
@@ -67,8 +71,7 @@ struct Ball
         return pos1.x < pos2.x;
     }
 
-    bool operator==(const Ball& other)
-    {
+    bool operator==(const Ball& other) const {
         return id == other.id;
     }
 };
