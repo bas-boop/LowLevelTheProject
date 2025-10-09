@@ -8,12 +8,13 @@
 #include <random>
 
 #include <algorithm>
+#include <iostream>
 #include <unordered_set>
 
 Crisis::Crisis()
 {
     sf::RenderWindow window;
-    window.create(sf::VideoMode({ 900, 900 }), "Our crisis window");
+    window.create(sf::VideoMode({ 2000, 1200 }), "Our crisis window");
     //window.setFramerateLimit(60);
     window.setVerticalSyncEnabled(true);
 
@@ -21,16 +22,16 @@ Crisis::Crisis()
         return;
 
     gen = std::mt19937(rd());
-    posDist = std::uniform_real_distribution<float>(5.0f, 895.0f);
+    posDist = std::uniform_real_distribution<float>(5.0f, 1195.0f);
     velDist = std::uniform_real_distribution<float>(-200.0f, 200.0f);
     colorDist = std::uniform_int_distribution<int>(0, 255);
     radiusDist = std::uniform_real_distribution<float>(2.5f, 7.5f);
 
     balls = std::vector<Ball>();
-    balls.reserve(2500);
-    grid.reserve(2500);
+    balls.reserve(ballAmount);
+    grid.reserve(ballAmount);
     
-    for (int i = 0; i < 2500; ++i)
+    for (int i = 0; i < ballAmount; ++i)
     {
         const float x = posDist(gen);
         const float y = posDist(gen);
@@ -61,8 +62,18 @@ Crisis::Crisis()
         window.clear();
 
         if (dt.asSeconds() > 0.f)
+        {
             fps = 1.f / dt.asSeconds();
+            frameCount++;
 
+            // Skip the first few frames to avoid artificially high FPS spikes
+            if (frameCount > 5 && fps > highestFps)
+            {
+                highestFps = fps;
+                std::cout << "Highest fps: " << highestFps << "\n";
+            }
+        }
+        
         updateBalls(window.getSize(), dt.asSeconds());
         drawBalls(window);
         
@@ -103,24 +114,20 @@ void Crisis::handleCollisions(const sf::Vector2u& windowSize)
     // Wall collisions
     for (auto& b : balls)
     {
-        if (b.shape.getPosition().x - b.shape.getRadius() < 0 || b.shape.getPosition().x + b.shape.getRadius() > W)
+        auto pos = b.shape.getPosition();
+        auto rad = b.shape.getRadius();
+        
+        if (pos.x - rad < 0 || pos.x + rad > W)
             b.velocity.x = -b.velocity.x;
-        if (b.shape.getPosition().y - b.shape.getRadius() < 0 || b.shape.getPosition().y + b.shape.getRadius() > H)
+        if (pos.y - rad < 0 || pos.y + rad > H)
             b.velocity.y = -b.velocity.y;
 
-        float x = std::clamp(b.shape.getPosition().x, b.shape.getRadius(), W - b.shape.getRadius());
-        float y = std::clamp(b.shape.getPosition().y, b.shape.getRadius(), H - b.shape.getRadius());
+        float x = std::clamp(pos.x, rad, W - rad);
+        float y = std::clamp(pos.y, rad, H - rad);
 
-        sf::Vector2f a = {x, y};
-        b.shape.setPosition(a);
+        pos = {x, y};
+        b.shape.setPosition(pos);
     }
-
-    // Ball collisions using spatial hash
-    const std::array<std::array<int, 2>, 9> neighborOffsets = {{
-        {{-1, -1}}, {{0, -1}}, {{1, -1}},
-        {{-1,  0}}, {{0,  0}}, {{1,  0}},
-        {{-1,  1}}, {{0,  1}}, {{1,  1}}
-    }};
 
     for (auto& [key, indices] : grid)
     {
@@ -142,7 +149,9 @@ void Crisis::handleCollisions(const sf::Vector2u& windowSize)
             {
                 for (const int j : other)
                 {
-                    if (i >= j) continue;
+                    if (i >= j)
+                        continue;
+                    
                     auto& a = balls[i];
                     auto& b = balls[j];
 

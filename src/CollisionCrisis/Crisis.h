@@ -24,10 +24,20 @@ private:
     std::chrono::high_resolution_clock::time_point start;
     std::chrono::high_resolution_clock::time_point end;
     float fps = 0;
-    
+    float highestFps = 0;
+    int frameCount = 0;
+
+    int ballAmount = 5000;
     std::vector<Ball> balls;
     std::unordered_map<int, std::vector<int>> grid;
-
+    // Ball collisions using spatial hash
+    const std::array<std::array<int, 2>, 9> neighborOffsets =
+    {{
+        {{-1, -1}}, {{0, -1}}, {{1, -1}},
+        {{-1,  0}}, {{0,  0}}, {{1,  0}},
+        {{-1,  1}}, {{0,  1}}, {{1,  1}}
+    }};
+    
     float cellSize = 32.0f;
     
     std::random_device rd;
@@ -40,9 +50,11 @@ private:
 
 struct Ball
 {
-    int id;    
+    int id;
+    float radius;
     sf::CircleShape shape;
     sf::Vector2f velocity;
+    sf::Vector2f position;
     
     Ball(int id, float x, float y, float radius, sf::Color color, float vx, float vy)
     {
@@ -54,11 +66,14 @@ struct Ball
         velocity = sf::Vector2f(vx, vy);
     }
 
-    bool operator<(const Ball& other) const {
-        auto pos1 = shape.getPosition();
-        auto pos2 = other.shape.getPosition();
+    bool operator<(const Ball& other) const
+    {
+        const auto pos1 = shape.getPosition();
+        const auto pos2 = other.shape.getPosition();
+
         if (pos1.x == pos2.x) 
             return pos1.y < pos2.y;
+
         return pos1.x < pos2.x;
     }
 

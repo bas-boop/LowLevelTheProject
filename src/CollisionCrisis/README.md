@@ -19,3 +19,10 @@ fourth time running (with spacial hashing, but broke collision)
 fith time running (with spacial hashing, forgot the call `buildSpatialGrid()`)
 * 71 FPS
 * 2500 balls
+
+sixth time running (release mode instead of debug mode + code clean-up)
+* 180 FPS (spikes to 300)
+* 5000 balls
+* or
+* 1.1
+* 250.000 balls
