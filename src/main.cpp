@@ -1,10 +1,11 @@
 #include "ChatClient/Chat.h"
 #include "CollisionCrisis/Crisis.h"
 #include "Exploring/Exploring.h"
+#include "GameOfLife/GameOfLife.h"
 
 int main()
 {
-    short what_program = 1;
+    short what_program = 3;
 
 	if (what_program == 0)
 	{
@@ -20,7 +21,7 @@ int main()
 	}
 	else if (what_program == 3)
 	{
-		// game of life
+		GameOfLife game_of_life;
 	}
 	else if (what_program == 4)
 	{
