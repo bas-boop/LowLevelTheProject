@@ -1,15 +1,15 @@
-#include "ChatClient/Chat.h"
+//#include "ChatClient/Chat.h"
 #include "CollisionCrisis/Crisis.h"
-#include "Exploring/Exploring.h"
-#include "GameOfLife/GameOfLife.h"
+//#include "Exploring/Exploring.h"
+//#include "GameOfLife/GameOfLife.h"
 
 int main()
 {
-    short what_program = 3;
+    short what_program = 1;
 
 	if (what_program == 0)
 	{
-		Chat chat;
+		//Chat chat;
 	}
 	else if (what_program == 1)
 	{
@@ -17,11 +17,11 @@ int main()
 	}
 	else if (what_program == 2)
 	{
-		Exploring exploring;
+		//Exploring exploring;
 	}
 	else if (what_program == 3)
 	{
-		GameOfLife game_of_life;
+		//GameOfLife game_of_life;
 	}
 	else if (what_program == 4)
 	{

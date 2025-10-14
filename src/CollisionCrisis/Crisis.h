@@ -1,9 +1,6 @@
 ﻿#pragma once
 
-#include "imgui-SFML.h"
 #include <SFML/Graphics.hpp>
-
-#include <vector>
 #include <random>
 
 struct Ball;
@@ -20,6 +17,9 @@ private:
     void handleCollisions(const sf::Vector2u& windowSize);
     void buildSpatialGrid();
     void drawBalls( sf::RenderWindow& window ) const;
+    void handleWallCollision(const sf::Vector2u& windowSize, Ball& ball);
+    void handleBallsCollision(Ball& ball1, Ball& ball2);
+    void checkCellPairCollisions(const std::vector<int>& cellA, const std::vector<int>& cellB);
 
     std::chrono::high_resolution_clock::time_point start;
     std::chrono::high_resolution_clock::time_point end;
@@ -27,25 +27,28 @@ private:
     float highestFps = 0;
     int frameCount = 0;
 
-    int ballAmount = 5000;
+    const int ballAmount = 250000;
+    const int gridStride = 30000;
+    const float cellSize = 32.0f;
     std::vector<Ball> balls;
     std::unordered_map<int, std::vector<int>> grid;
-    // Ball collisions using spatial hash
     const std::array<std::array<int, 2>, 9> neighborOffsets =
     {{
         {{-1, -1}}, {{0, -1}}, {{1, -1}},
         {{-1,  0}}, {{0,  0}}, {{1,  0}},
         {{-1,  1}}, {{0,  1}}, {{1,  1}}
     }};
-    
-    float cellSize = 32.0f;
+
+    const sf::Vector2u windowSize = {1800, 1200};
+    const float margin = 5.0f;
     
     std::random_device rd;
     std::mt19937 gen;
-    std::uniform_real_distribution<float> posDist;
+    std::uniform_real_distribution<float> posxDist;
+    std::uniform_real_distribution<float> posyDist;
     std::uniform_real_distribution<float> velDist;
-    std::uniform_int_distribution<int> colorDist;
     std::uniform_real_distribution<float> radiusDist;
+    std::uniform_int_distribution<> colorDist;
 };
 
 struct Ball
