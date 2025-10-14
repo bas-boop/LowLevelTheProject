@@ -8,33 +8,24 @@
 #include <random>
 
 GameOfLife::GameOfLife() :
-    rows(60),
-    cols(60),
-    cellSize(15),
-    running(true),
+    rows(600),
+    cols(600),
+    cellSize(2),
     fps(0),
     highestFps(0),
     frameCount(0)
 {
-    sf::RenderWindow window(sf::VideoMode({900, 900}), "Game of Life");
-    window.setFramerateLimit(60);
-    window.setVerticalSyncEnabled(true);
+    sf::RenderWindow window(sf::VideoMode({1200, 1200}), "Game of Life");
+    //window.setFramerateLimit(30);
+    //window.setVerticalSyncEnabled(true);
 
     if (!ImGui::SFML::Init(window))
         return;
 
-    auto gen = std::mt19937(rd());
-    
-    bool a = false;
-    auto b = std::uniform_real_distribution<float>(0.f, 1.f);
-
-    if (b(gen) < 0.5f)
-        a = true;
-    
-    grid.resize(rows, std::vector<bool>(cols, a));
-    bufferGrid = grid;
+    buildGrid();
 
     sf::Clock deltaClock;
+    
     while (window.isOpen())
     {
         while (const std::optional event = window.pollEvent())
@@ -43,20 +34,7 @@ GameOfLife::GameOfLife() :
 
             if (event->is<sf::Event::Closed>())
                 window.close();
-            
-            /*if (auto* mouse = event->getIf<sf::Event::MouseButtonPressed>())
-            {
-                if (mouse->button == sf::Mouse::Button::Left)
-                {
-                    int x = mouse->position.x / cellSize;
-                    int y = mouse->position.y / cellSize;
-                    if (x >= 0 && x < cols && y >= 0 && y < rows)
-                        grid[y][x] = !grid[y][x];
-                }
-            }*/
         }
-
-        ImGui::SFML::Update(window, deltaClock.restart());
 
         sf::Time dt = deltaClock.restart();
         ImGui::SFML::Update(window, dt);
@@ -67,7 +45,10 @@ GameOfLife::GameOfLife() :
         window.clear();
         drawGrid(window);
         showFps();
-        //showControls();
+
+        if (ImGui::Button("Restart"))
+            buildGrid();
+
         ImGui::SFML::Render(window);
         window.display();
     }
@@ -136,7 +117,7 @@ void GameOfLife::drawGrid(sf::RenderWindow& window)
         for (int x = 0; x < cols; ++x)
         {
             cellShape.setPosition({(float) x * cellSize, (float) y * cellSize});
-            cellShape.setFillColor(grid[y][x] ? sf::Color::White : sf::Color(40, 40, 40));
+            cellShape.setFillColor(grid[y][x] ? alive : dead);
             window.draw(cellShape);
         }
     }
@@ -148,7 +129,9 @@ void GameOfLife::updateFps(sf::Time dt)
     {
         fps = 1.f / dt.asSeconds();
         frameCount++;
-        if (frameCount > 5 && fps > highestFps)
+
+        if (frameCount > 5
+            && fps > highestFps)
         {
             highestFps = fps;
             std::cout << "Highest fps: " << highestFps << "\n";
@@ -163,19 +146,20 @@ void GameOfLife::showFps()
     ImGui::End();
 }
 
-void GameOfLife::showControls()
+void GameOfLife::buildGrid()
 {
-    ImGui::Begin("Controls");
-    if (ImGui::Button(running ? "Pause" : "Play"))
-        running = !running;
-    ImGui::SameLine();
-    if (ImGui::Button("Step"))
-        updateGrid();
-    ImGui::SameLine();
-    if (ImGui::Button("Clear"))
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution dist(0.f, 1.f);
+
+    grid.resize(rows, std::vector(cols, false));
+    
+    for (int y = 0; y < rows; ++y)
     {
-        for (auto& row : grid)
-            std::fill(row.begin(), row.end(), false);
+        for (int x = 0; x < cols; ++x)
+        {
+            grid[y][x] = dist(gen) < 0.5f;
+        }
     }
-    ImGui::End();
+    
+    bufferGrid = grid;
 }

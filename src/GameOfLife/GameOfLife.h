@@ -14,7 +14,9 @@ private:
     int rows;
     int cols;
     int cellSize;
-    bool running;
+
+    const sf::Color alive = {76, 58, 98};
+    const sf::Color dead = {35, 35, 54};
 
     float fps;
     float highestFps;
@@ -30,5 +32,5 @@ private:
     void drawGrid(sf::RenderWindow& window);
     void updateFps(sf::Time dt);
     void showFps();
-    void showControls();
+    void buildGrid();
 };
