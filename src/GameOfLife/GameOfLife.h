@@ -1,9 +1,8 @@
 ﻿#pragma once
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
-#include <imgui.h>
 #include <random>
-#include <vector>
+#include <memory>
 
 class GameOfLife
 {
@@ -22,8 +21,8 @@ private:
     float highestFps;
     int frameCount;
 
-    std::vector<std::vector<bool>> grid;
-    std::vector<std::vector<bool>> bufferGrid;
+    std::unique_ptr<bool[]> grid;
+    std::unique_ptr<bool[]> bufferGrid;
 
     std::random_device rd;
     

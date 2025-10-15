@@ -1,7 +1,6 @@
 ﻿#include "GameOfLife.h"
 
 #include <iostream>
-#include <vector>
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -10,14 +9,9 @@
 GameOfLife::GameOfLife() :
     rows(600),
     cols(600),
-    cellSize(2),
-    fps(0),
-    highestFps(0),
-    frameCount(0)
+    cellSize(2)
 {
     sf::RenderWindow window(sf::VideoMode({1200, 1200}), "Game of Life");
-    //window.setFramerateLimit(30);
-    //window.setVerticalSyncEnabled(true);
 
     if (!ImGui::SFML::Init(window))
         return;
@@ -39,8 +33,8 @@ GameOfLife::GameOfLife() :
         sf::Time dt = deltaClock.restart();
         ImGui::SFML::Update(window, dt);
 
-        updateGrid();
         updateFps(dt);
+        updateGrid();
         
         window.clear();
         drawGrid(window);
@@ -57,50 +51,51 @@ GameOfLife::GameOfLife() :
 }
 
 void GameOfLife::updateGrid()
-{
-    bufferGrid = grid;
-
-    for (int y = 0; y < rows; ++y)
+{    
+    for (int i = 0; i < rows * cols; ++i)
     {
-        for (int x = 0; x < cols; ++x)
+        const int x = i % cols;
+        const int y = i / cols;
+
+        const int neighbors = countNeighbors(x, y);
+        const bool aliveNow = grid[i];
+        bool nextState = aliveNow;
+
+        if (aliveNow)
         {
-            int neighbors = countNeighbors(x, y);
-            
-            if (grid[y][x])
-            {
-                // Alive
-                if (neighbors < 2
-                    || neighbors > 3)
-                    bufferGrid[y][x] = false;
-            }
-            else
-            {
-                // Dead
-                if (neighbors == 3)
-                    bufferGrid[y][x] = true;
-            }
+            if (neighbors < 2
+                || neighbors > 3)
+                nextState = false;
         }
+        else if (neighbors == 3)
+            nextState = true;
+
+        bufferGrid[i] = nextState;
     }
-    
+
     grid.swap(bufferGrid);
 }
 
-int GameOfLife::countNeighbors(int x, int y)
+int GameOfLife::countNeighbors(const int x, const int y)
 {
     int count = 0;
     
-    for (int dy = -1; dy <= 1; ++dy)
+    for (int dy = -1; dy <= 1; dy++)
     {
-        for (int dx = -1; dx <= 1; ++dx)
+        for (int dx = -1; dx <= 1; dx++)
         {
-            if (dx == 0 && dy == 0) continue;
+            if (dx == 0
+                && dy == 0)
+                continue;
 
-            int nx = x + dx;
-            int ny = y + dy;
-            
-            if (nx >= 0 && nx < cols
-                && ny >= 0 && ny < rows
-                && grid[ny][nx])
+            const int nx = x + dx;
+            const int ny = y + dy;
+
+            if (nx >= 0
+                && nx < cols
+                && ny >= 0
+                && ny < rows
+                && grid[ny * cols + nx])
                 count++;
         }
     }
@@ -108,18 +103,19 @@ int GameOfLife::countNeighbors(int x, int y)
     return count;
 }
 
+
 void GameOfLife::drawGrid(sf::RenderWindow& window)
 {
     sf::RectangleShape cellShape(sf::Vector2f(cellSize - 1, cellSize - 1));
     
-    for (int y = 0; y < rows; ++y)
+    for (int i = 0; i < rows * cols; ++i)
     {
-        for (int x = 0; x < cols; ++x)
-        {
-            cellShape.setPosition({(float) x * cellSize, (float) y * cellSize});
-            cellShape.setFillColor(grid[y][x] ? alive : dead);
-            window.draw(cellShape);
-        }
+        const int x = i % cols;
+        const int y = i / cols;
+        
+        cellShape.setPosition({(float) x * cellSize, (float) y * cellSize});
+        cellShape.setFillColor(grid[y * cols + x] ? alive : dead);
+        window.draw(cellShape);
     }
 }
 
@@ -148,18 +144,13 @@ void GameOfLife::showFps()
 
 void GameOfLife::buildGrid()
 {
+    grid = std::make_unique<bool[]>(rows * cols);
+    bufferGrid = std::make_unique<bool[]>(rows * cols);
+
     std::mt19937 gen(rd());
     std::uniform_real_distribution dist(0.f, 1.f);
 
-    grid.resize(rows, std::vector(cols, false));
-    
-    for (int y = 0; y < rows; ++y)
-    {
-        for (int x = 0; x < cols; ++x)
-        {
-            grid[y][x] = dist(gen) < 0.5f;
-        }
-    }
-    
-    bufferGrid = grid;
+    for (int i = 0; i < rows * cols; ++i)
+        grid[i] = dist(gen) < 0.5f;
 }
+
