@@ -27,7 +27,7 @@ private:
     float highestFps = 0;
     int frameCount = 0;
 
-    const int ballAmount = 250000;
+    const int ballAmount = 7500;
     const int gridStride = 30000;
     const float cellSize = 32.0f;
     std::vector<Ball> balls;

@@ -119,7 +119,9 @@ void Crisis::handleCollisions(const sf::Vector2u& windowSize)
             const int neighborKey = neighborY * gridStride + neighborX;
 
             auto it = grid.find(neighborKey);
-            if (it == grid.end()) continue;
+
+            if (it == grid.end())
+                continue;
 
             checkCellPairCollisions(indices, it->second);
         }
