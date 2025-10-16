@@ -6,10 +6,7 @@
 #include <imgui-SFML.h>
 #include <random>
 
-GameOfLife::GameOfLife() :
-    rows(600),
-    cols(600),
-    cellSize(2)
+GameOfLife::GameOfLife()
 {
     sf::RenderWindow window(sf::VideoMode({1200, 1200}), "Game of Life");
 
@@ -49,7 +46,7 @@ GameOfLife::GameOfLife() :
 
 void GameOfLife::updateGrid()
 {
-    bufferGrider.clear();
+    bufferGrid.clear();
     
     for (int i = 0; i < rows * cols; ++i)
     {
@@ -57,7 +54,7 @@ void GameOfLife::updateGrid()
         const int y = i / cols;
 
         const int neighbors = countNeighbors(x, y);
-        const bool aliveNow = grider.contains(i);
+        const bool aliveNow = grid.contains(i);
         bool nextState = aliveNow;
 
         if (aliveNow)
@@ -70,36 +67,29 @@ void GameOfLife::updateGrid()
             nextState = true;
 
         if (nextState)
-            bufferGrider.insert(i);
+            bufferGrid.insert(i);
     }
 
-    grider.swap(bufferGrider);
+    grid.swap(bufferGrid);
 }
 
 int GameOfLife::countNeighbors(const int x, const int y)
 {
     int count = 0;
-    
-    for (int dy = -1; dy <= 1; dy++)
+
+    for (const int* offset : neighborOffsets)
     {
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            if (dx == 0
-                && dy == 0)
-                continue;
+        const int nx = x + offset[0];
+        const int ny = y + offset[1];
 
-            const int nx = x + dx;
-            const int ny = y + dy;
-
-            if (nx >= 0
-                && nx < cols
-                && ny >= 0
-                && ny < rows
-                && grider.contains(ny * cols + nx))
-                count++;
-        }
+        if (nx >= 0
+            && nx < cols
+            && ny >= 0
+            && ny < rows
+            && grid.contains(ny * cols + nx))
+            ++count;
     }
-    
+
     return count;
 }
 
@@ -114,7 +104,7 @@ void GameOfLife::drawGrid(sf::RenderWindow& window)
         const int y = i / cols;
         
         cellShape.setPosition({(float)x * cellSize, (float)y * cellSize});
-        cellShape.setFillColor(grider.contains(i) ? alive : dead);
+        cellShape.setFillColor(grid.contains(i) ? alive : dead);
         window.draw(cellShape);
     }
 }
@@ -148,18 +138,18 @@ void GameOfLife::showUi()
 
 void GameOfLife::buildGrid()
 {
-    grider.clear();
-    bufferGrider.clear();
+    grid.clear();
+    bufferGrid.clear();
 
-    grider.reserve(rows * cols);
-    bufferGrider.reserve(rows * cols);
+    grid.reserve(rows * cols);
+    bufferGrid.reserve(rows * cols);
 
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(0.f, 1.f);
+    std::uniform_real_distribution dist(0.f, 1.f);
 
     for (int i = 0; i < rows * cols; ++i)
     {
         if (dist(gen) < 0.5f)
-            grider.insert(i);
+            grid.insert(i);
     }
 }

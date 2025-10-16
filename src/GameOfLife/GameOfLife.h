@@ -10,9 +10,9 @@ public:
     GameOfLife();
 
 private:
-    int rows;
-    int cols;
-    int cellSize;
+    const int rows = 600;
+    const int cols = 600;
+    const int cellSize = 2;
 
     const sf::Color alive = {76, 58, 98};
     const sf::Color dead = {35, 35, 54};
@@ -21,9 +21,15 @@ private:
     float highestFps;
     int frameCount;
 
-    std::unordered_set<int> grider;
-    std::unordered_set<int> bufferGrider;
+    std::unordered_set<int> grid;
+    std::unordered_set<int> bufferGrid;
 
+    const int neighborOffsets[8][2] = {
+        {-1, -1}, { 0, -1}, { 1, -1},
+        {-1,  0},           { 1,  0},
+        {-1,  1}, { 0,  1}, { 1,  1}
+    };
+    
     std::random_device rd;
     
     void updateGrid();
