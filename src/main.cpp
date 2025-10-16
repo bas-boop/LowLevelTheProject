@@ -1,3 +1,4 @@
+#include "Particles/ParticleWindow.h"
 #include "ChatClient/Chat.h"
 #include "CollisionCrisis/Crisis.h"
 #include "Exploring/Exploring.h"
@@ -5,7 +6,7 @@
 
 int main()
 {
-    short what_program = 3;
+    short what_program = 4;
 
 	if (what_program == 0)
 	{
@@ -25,7 +26,7 @@ int main()
 	}
 	else if (what_program == 4)
 	{
-		// memory & cache Optimization
+		ParticleWindow particle;
 	}
 
 	return 0;
