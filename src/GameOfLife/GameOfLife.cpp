@@ -38,10 +38,7 @@ GameOfLife::GameOfLife() :
         
         window.clear();
         drawGrid(window);
-        showFps();
-
-        if (ImGui::Button("Restart"))
-            buildGrid();
+        showUi();
 
         ImGui::SFML::Render(window);
         window.display();
@@ -51,14 +48,16 @@ GameOfLife::GameOfLife() :
 }
 
 void GameOfLife::updateGrid()
-{    
+{
+    bufferGrider.clear();
+    
     for (int i = 0; i < rows * cols; ++i)
     {
         const int x = i % cols;
         const int y = i / cols;
 
         const int neighbors = countNeighbors(x, y);
-        const bool aliveNow = grid[i];
+        const bool aliveNow = grider.contains(i);
         bool nextState = aliveNow;
 
         if (aliveNow)
@@ -70,10 +69,11 @@ void GameOfLife::updateGrid()
         else if (neighbors == 3)
             nextState = true;
 
-        bufferGrid[i] = nextState;
+        if (nextState)
+            bufferGrider.insert(i);
     }
 
-    grid.swap(bufferGrid);
+    grider.swap(bufferGrider);
 }
 
 int GameOfLife::countNeighbors(const int x, const int y)
@@ -95,7 +95,7 @@ int GameOfLife::countNeighbors(const int x, const int y)
                 && nx < cols
                 && ny >= 0
                 && ny < rows
-                && grid[ny * cols + nx])
+                && grider.contains(ny * cols + nx))
                 count++;
         }
     }
@@ -113,8 +113,8 @@ void GameOfLife::drawGrid(sf::RenderWindow& window)
         const int x = i % cols;
         const int y = i / cols;
         
-        cellShape.setPosition({(float) x * cellSize, (float) y * cellSize});
-        cellShape.setFillColor(grid[y * cols + x] ? alive : dead);
+        cellShape.setPosition({(float)x * cellSize, (float)y * cellSize});
+        cellShape.setFillColor(grider.contains(i) ? alive : dead);
         window.draw(cellShape);
     }
 }
@@ -135,22 +135,31 @@ void GameOfLife::updateFps(sf::Time dt)
     }
 }
 
-void GameOfLife::showFps()
+void GameOfLife::showUi()
 {
-    ImGui::Begin("FPS Counter");
+    ImGui::Begin("Debug info");
     ImGui::Text("FPS: %.1f", fps);
+
+    if (ImGui::Button("Restart"))
+        buildGrid();
+    
     ImGui::End();
 }
 
 void GameOfLife::buildGrid()
 {
-    grid = std::make_unique<bool[]>(rows * cols);
-    bufferGrid = std::make_unique<bool[]>(rows * cols);
+    grider.clear();
+    bufferGrider.clear();
+
+    grider.reserve(rows * cols);
+    bufferGrider.reserve(rows * cols);
 
     std::mt19937 gen(rd());
-    std::uniform_real_distribution dist(0.f, 1.f);
+    std::uniform_real_distribution<float> dist(0.f, 1.f);
 
     for (int i = 0; i < rows * cols; ++i)
-        grid[i] = dist(gen) < 0.5f;
+    {
+        if (dist(gen) < 0.5f)
+            grider.insert(i);
+    }
 }
-

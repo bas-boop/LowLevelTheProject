@@ -2,7 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
 #include <random>
-#include <memory>
+#include <unordered_set>
 
 class GameOfLife
 {
@@ -21,15 +21,17 @@ private:
     float highestFps;
     int frameCount;
 
-    std::unique_ptr<bool[]> grid;
-    std::unique_ptr<bool[]> bufferGrid;
+    std::unordered_set<int> grider;
+    std::unordered_set<int> bufferGrider;
 
     std::random_device rd;
     
     void updateGrid();
     int countNeighbors(int x, int y);
-    void drawGrid(sf::RenderWindow& window);
-    void updateFps(sf::Time dt);
-    void showFps();
+
     void buildGrid();
+    void drawGrid(sf::RenderWindow& window);
+    
+    void updateFps(sf::Time dt);
+    void showUi();
 };
