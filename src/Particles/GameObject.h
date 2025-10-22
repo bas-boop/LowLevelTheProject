@@ -2,8 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
-// Base Class
-class GameObject {
+class GameObject
+{
 public:
     virtual ~GameObject() = default;
     virtual void update(float deltaTime) = 0;
@@ -14,5 +14,6 @@ protected:
     bool active;
     double creationTime;
     int id;
-    float x, y;
+    float x;
+    float y;
 };
