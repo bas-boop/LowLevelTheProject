@@ -2,7 +2,10 @@
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
 #include <random>
-#include <unordered_set>
+#include <vector>
+#include <thread>
+
+#include "WorkerThreadPool.h"
 
 class GameOfLife
 {
@@ -17,27 +20,31 @@ private:
     const sf::Color alive = {76, 58, 98};
     const sf::Color dead = {35, 35, 54};
 
-    float fps;
-    float highestFps;
-    int frameCount;
+    float fps = 0.f;
+    float highestFps = 0.f;
+    int frameCount = 0;
 
-    std::unordered_set<int> grid;
-    std::unordered_set<int> bufferGrid;
+    std::vector<uint8_t> grid;
+    std::vector<uint8_t> bufferGrid;
 
     const int neighborOffsets[8][2] = {
         {-1, -1}, { 0, -1}, { 1, -1},
         {-1,  0},           { 1,  0},
         {-1,  1}, { 0,  1}, { 1,  1}
     };
-    
+
     std::random_device rd;
-    
+
+    // threading
+    std::unique_ptr<WorkerThreadPool> threadPool;
+    int poolThreadCount = 0; // set in ctor
+
     void updateGrid();
-    int countNeighbors(int x, int y);
+    inline int countNeighbors(int x, int y) const;
 
     void buildGrid();
     void drawGrid(sf::RenderWindow& window);
-    
+
     void updateFps(sf::Time dt);
     void showUi();
 };
