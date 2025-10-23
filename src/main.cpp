@@ -26,10 +26,9 @@ int main()
 	}
 	else if (what_program == 4)
 	{
-		// the particle system im talking about
 		ParticleWindow particle;
-		//particle.run();
-		particle.runOld();
+		particle.run();
+		//particle.runOld();
 	}
 
 	return 0;
