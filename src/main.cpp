@@ -28,7 +28,8 @@ int main()
 	{
 		// the particle system im talking about
 		ParticleWindow particle;
-		particle.run();
+		//particle.run();
+		particle.runOld();
 	}
 
 	return 0;

@@ -8,6 +8,8 @@ class ParticleWindow {
 public:
     ParticleWindow();
     void run();
+    void runOld();
+    
 private:
     sf::RenderWindow window;
     ParticleSystem particleSystem;
