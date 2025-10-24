@@ -9,3 +9,20 @@
 
 I want to multithread each row of the grid.
 For this I will be using the thread pool of the class (MultithreadingDemo).
+
+First fixed a small bug with the threadpool itself. I changed line 31.
+```c++
+// was this
+workers.emplace_back(threadFunc);
+// is now this
+workers.emplace_back(&WorkerThreadPool::threadFunc, this);
+```
+After that I applied it to each row of my game of life.
+I did change the grid back to a vector, because that was a different assigment.
+After changing it to multithreading I only gained 1 FPS. Something is not right.
+---
+I found 2 possible bottlenecks, the way I draw the grid is wrong of the multithreading taks is too short.
+So I fixed the drawing because 600*600 squares each frame does not sound fast.
+
+I put the whole grid into a `sf::VertexArray` that is stored with 2 triangles to make each cell of the grid.
+This 10x the FPS from 6 to 60, sometimes it can even spike up to 180.

@@ -21,6 +21,7 @@ GameOfLife::GameOfLife()
     threadPool = std::make_unique<WorkerThreadPool>(static_cast<size_t>(poolThreadCount));
 
     buildGrid();
+    createVisibleGrid();
 
     sf::Clock deltaClock;
     
@@ -127,17 +128,16 @@ void GameOfLife::updateGrid()
 
 void GameOfLife::drawGrid(sf::RenderWindow& window)
 {
-    sf::RectangleShape cellShape(sf::Vector2f(cellSize - 1, cellSize - 1));
-    
     for (int i = 0; i < rows * cols; ++i)
     {
-        const int x = i % cols;
-        const int y = i / cols;
-        
-        cellShape.setPosition({(float)x * cellSize, (float)y * cellSize});
-        cellShape.setFillColor(grid[i] ? alive : dead);
-        window.draw(cellShape);
+        sf::Color c = grid[i] ? alive : dead;
+        const int v = i * 6;
+
+        for (int k = 0; k < 6; ++k)
+            cellVertices[v + k].color = c;
     }
+
+    window.draw(cellVertices);
 }
 
 void GameOfLife::updateFps(sf::Time dt)
@@ -171,14 +171,8 @@ void GameOfLife::showUi()
 
 void GameOfLife::buildGrid()
 {
-    grid.clear();
-    bufferGrid.clear();
-
-    grid.reserve(rows * cols);
-    bufferGrid.reserve(rows * cols);
-    
-    //grid.assign(rows * cols, 0);
-    //bufferGrid.assign(rows * cols, 0);
+    grid.assign(rows * cols, 0);
+    bufferGrid.assign(rows * cols, 0);
 
     std::mt19937 gen(rd());
     std::uniform_real_distribution dist(0.f, 1.f);
@@ -187,5 +181,31 @@ void GameOfLife::buildGrid()
     {
         if (dist(gen) < 0.5f)
             grid[i] = 1;
+    }
+}
+
+void GameOfLife::createVisibleGrid()
+{
+    cellVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
+    cellVertices.resize(rows * cols * 6);
+
+    for (int y = 0; y < rows; ++y)
+    {
+        for (int x = 0; x < cols; ++x)
+        {
+            const float px = x * cellSize;
+            const float py = y * cellSize;
+            const int index = (y * cols + x) * 6;
+
+            // Triangle 1
+            cellVertices[index + 0].position = {px, py};
+            cellVertices[index + 1].position = {px + cellSize, py};
+            cellVertices[index + 2].position = {px + cellSize, py + cellSize};
+
+            // Triangle 2
+            cellVertices[index + 3].position = {px, py};
+            cellVertices[index + 4].position = {px + cellSize, py + cellSize};
+            cellVertices[index + 5].position = {px, py + cellSize};
+        }
     }
 }

@@ -26,6 +26,7 @@ private:
 
     std::vector<uint8_t> grid;
     std::vector<uint8_t> bufferGrid;
+    sf::VertexArray cellVertices;
 
     const int neighborOffsets[8][2] = {
         {-1, -1}, { 0, -1}, { 1, -1},
@@ -44,6 +45,7 @@ private:
 
     void buildGrid();
     void drawGrid(sf::RenderWindow& window);
+    void createVisibleGrid();
 
     void updateFps(sf::Time dt);
     void showUi();
