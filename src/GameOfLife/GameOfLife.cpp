@@ -14,6 +14,7 @@ GameOfLife::GameOfLife()
         return;
 
     buildGrid();
+    createVisibleGrid();
 
     sf::Clock deltaClock;
     
@@ -96,17 +97,19 @@ int GameOfLife::countNeighbors(const int x, const int y)
 
 void GameOfLife::drawGrid(sf::RenderWindow& window)
 {
-    sf::RectangleShape cellShape(sf::Vector2f(cellSize - 1, cellSize - 1));
-    
     for (int i = 0; i < rows * cols; ++i)
     {
-        const int x = i % cols;
-        const int y = i / cols;
-        
-        cellShape.setPosition({(float)x * cellSize, (float)y * cellSize});
-        cellShape.setFillColor(grid.contains(i) ? alive : dead);
-        window.draw(cellShape);
+        sf::Color c = grid.contains(i) ? alive : dead;
+        const int v = i * 4;
+
+        // Assign color to all 4 unique vertices, for the 2 triangles
+        cellVertices[v + 0].color = c;
+        cellVertices[v + 1].color = c;
+        cellVertices[v + 2].color = c;
+        cellVertices[v + 3].color = c;
     }
+
+    window.draw(cellVertices);
 }
 
 void GameOfLife::updateFps(sf::Time dt)
@@ -129,8 +132,12 @@ void GameOfLife::showUi()
 {
     ImGui::Begin("Debug info");
     ImGui::Text("FPS: %.1f", fps);
+    ImGui::Text("Highest FPS: %.1f", highestFps);
+    ImGui::Text("Rows: %d  Cols: %d", rows, cols);
+    ImGui::Text("Cells: %d", rows * cols);
+    ImGui::Text("Triangles to draw: %d", rows * cols * 2);
 
-    if (ImGui::Button("Restart"))
+    if (ImGui::Button("Restart Game of Life"))
         buildGrid();
     
     ImGui::End();
@@ -151,5 +158,27 @@ void GameOfLife::buildGrid()
     {
         if (dist(gen) < 0.5f)
             grid.insert(i);
+    }
+}
+
+void GameOfLife::createVisibleGrid()
+{
+    cellVertices.setPrimitiveType(sf::PrimitiveType::TriangleStrip);
+    cellVertices.resize(rows * cols * 4);
+
+    for (int y = 0; y < rows; ++y)
+    {
+        for (int x = 0; x < cols; ++x)
+        {
+            const float px = x * cellSize;
+            const float py = y * cellSize;
+            const int index = (y * cols + x) * 4;
+
+            // 4 vertices in a strip
+            cellVertices[index + 0].position = {px, py};
+            cellVertices[index + 1].position = {px + cellSize, py};
+            cellVertices[index + 2].position = {px, py + cellSize};
+            cellVertices[index + 3].position = {px + cellSize, py + cellSize};
+        }
     }
 }

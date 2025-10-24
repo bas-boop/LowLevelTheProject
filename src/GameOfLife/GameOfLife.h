@@ -23,6 +23,7 @@ private:
 
     std::unordered_set<int> grid;
     std::unordered_set<int> bufferGrid;
+    sf::VertexArray cellVertices;
 
     const int neighborOffsets[8][2] = {
         {-1, -1}, { 0, -1}, { 1, -1},
@@ -37,6 +38,7 @@ private:
 
     void buildGrid();
     void drawGrid(sf::RenderWindow& window);
+    void createVisibleGrid();
     
     void updateFps(sf::Time dt);
     void showUi();
