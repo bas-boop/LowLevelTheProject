@@ -26,3 +26,10 @@ So I fixed the drawing because 600*600 squares each frame does not sound fast.
 
 I put the whole grid into a `sf::VertexArray` that is stored with 2 triangles to make each cell of the grid.
 This 10x the FPS from 6 to 60, sometimes it can even spike up to 180.
+---
+Now that the rendering is correct. Let's fix the thread task that is to small.
+
+I changed the threading to have multipole rows instead of 1. This was better for each thread, now they don't wait as long.
+
+I also increased the size to 1200 by 1800 to have it around 50FPS. But I should test it to the limits.
+What about 5000 by 10.000 cells? I can reach 1.6FPS, so that is a good limit. 100 Million triangles that 1 draw each frame.

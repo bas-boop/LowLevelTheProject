@@ -13,9 +13,20 @@ public:
     GameOfLife();
 
 private:
-    const int rows = 600;
-    const int cols = 600;
-    const int cellSize = 2;
+    // original number, 330 FPS
+    //const int rows = 600;
+    //const int cols = 600;
+    //const int cellSize = 2;
+    
+    // testing during making multithreading, 50 FPS
+    const int rows = 1200;
+    const int cols = 1800;
+    const int cellSize = 1;
+    
+    // absolute limits, 1 FPS
+    //const int rows = 5000;
+    //const int cols = 10000;
+    //const float cellSize = 0.1f;
 
     const sf::Color alive = {76, 58, 98};
     const sf::Color dead = {35, 35, 54};

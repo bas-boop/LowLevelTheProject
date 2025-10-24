@@ -1,6 +1,5 @@
 ﻿#include "GameOfLife.h"
 
-#include <iostream>
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -8,7 +7,7 @@
 
 GameOfLife::GameOfLife()
 {
-    sf::RenderWindow window(sf::VideoMode({1200, 1200}), "Game of Life");
+    sf::RenderWindow window(sf::VideoMode({1800, 1200}), "Game of Life");
 
     if (!ImGui::SFML::Init(window))
         return;
@@ -74,67 +73,67 @@ inline int GameOfLife::countNeighbors(const int x, const int y) const
 void GameOfLife::updateGrid()
 {
     std::ranges::fill(bufferGrid, 0);
-    std::atomic<int> rowsCompleted{0};
 
-    for (int y = 0; y < rows; ++y)
+    //const int rowsPerTask = 5;
+    const int rowsPerTask = poolThreadCount;
+    const int taskCount = (rows + rowsPerTask - 1) / rowsPerTask;
+    std::atomic<int> tasksCompleted{0};
+
+    for (int taskIndex = 0; taskIndex < taskCount; ++taskIndex)
     {
-        threadPool->enqueue([this, y, &rowsCompleted]()
+        threadPool->enqueue([this, taskIndex, rowsPerTask, &tasksCompleted]()
         {
-            const int rowStart = y * cols;
-            
-            for (int x = 0; x < cols; ++x)
+            const int yStart = taskIndex * rowsPerTask;
+            const int yEnd   = std::min(rows, yStart + rowsPerTask);
+
+            for (int y = yStart; y < yEnd; ++y)
             {
-                const int i = rowStart + x;
-                int neighbors = 0;
+                const int rowStart = y * cols;
                 
-                for (const auto& offs : neighborOffsets)
+                for (int x = 0; x < cols; ++x)
                 {
-                    const int nx = x + offs[0];
-                    const int ny = y + offs[1];
+                    int neighbors = 0;
                     
-                    if (nx >= 0 && nx < cols && ny >= 0 && ny < rows)
-                        neighbors += grid[ny * cols + nx];
-                }
+                    for (auto& offs : neighborOffsets)
+                    {
+                        const int nx = x + offs[0];
+                        const int ny = y + offs[1];
+                        
+                        if(nx >= 0 && nx < cols && ny >= 0 && ny < rows)
+                            neighbors += grid[ny * cols + nx];
+                    }
 
-                const bool aliveNow = grid[i] != 0;
-                bool nextState = aliveNow;
-                
-                if (aliveNow)
-                {
-                    if (neighbors < 2 || neighbors > 3)
-                        nextState = false;
+                    const bool alive = grid[rowStart + x] != 0;
+                    bufferGrid[rowStart + x] = (neighbors == 3 || (alive && neighbors == 2)) ? 1 : 0;
                 }
-                else
-                {
-                    if (neighbors == 3)
-                        nextState = true;
-                }
-
-                bufferGrid[i] = nextState ? 1 : 0;
             }
             
-            rowsCompleted++;
+            tasksCompleted.fetch_add(1, std::memory_order_release);
         });
     }
 
-    // Wait for all rows to complete.
-    while (rowsCompleted.load(std::memory_order_acquire) < rows)
+    // Wait for all tasks to finish
+    while (tasksCompleted.load(std::memory_order_acquire) < taskCount)
     {
-        std::this_thread::sleep_for(std::chrono::microseconds(50));
+        std::this_thread::yield();
     }
-
+    
     grid.swap(bufferGrid);
 }
+
 
 void GameOfLife::drawGrid(sf::RenderWindow& window)
 {
     for (int i = 0; i < rows * cols; ++i)
     {
         sf::Color c = grid[i] ? alive : dead;
-        const int v = i * 6;
+        const int v = i * 4;
 
-        for (int k = 0; k < 6; ++k)
-            cellVertices[v + k].color = c;
+        // Assign color to all 4 unique vertices, for the 2 triangles
+        cellVertices[v + 0].color = c;
+        cellVertices[v + 1].color = c;
+        cellVertices[v + 2].color = c;
+        cellVertices[v + 3].color = c;
     }
 
     window.draw(cellVertices);
@@ -149,10 +148,7 @@ void GameOfLife::updateFps(sf::Time dt)
 
         if (frameCount > 5
             && fps > highestFps)
-        {
             highestFps = fps;
-            std::cout << "Highest fps: " << highestFps << "\n";
-        }
     }
 }
 
@@ -160,10 +156,13 @@ void GameOfLife::showUi()
 {
     ImGui::Begin("Debug info");
     ImGui::Text("FPS: %.1f", fps);
+    ImGui::Text("Highest FPS: %.1f", highestFps);
     ImGui::Text("Pool threads: %d", poolThreadCount);
     ImGui::Text("Rows: %d  Cols: %d", rows, cols);
+    ImGui::Text("Cells: %d", rows * cols);
+    ImGui::Text("Triangles to draw: %d", rows * cols * 2);
 
-    if (ImGui::Button("Restart"))
+    if (ImGui::Button("Restart Game of Life"))
         buildGrid();
     
     ImGui::End();
@@ -186,8 +185,8 @@ void GameOfLife::buildGrid()
 
 void GameOfLife::createVisibleGrid()
 {
-    cellVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
-    cellVertices.resize(rows * cols * 6);
+    cellVertices.setPrimitiveType(sf::PrimitiveType::TriangleStrip);
+    cellVertices.resize(rows * cols * 4);
 
     for (int y = 0; y < rows; ++y)
     {
@@ -195,17 +194,13 @@ void GameOfLife::createVisibleGrid()
         {
             const float px = x * cellSize;
             const float py = y * cellSize;
-            const int index = (y * cols + x) * 6;
+            const int index = (y * cols + x) * 4;
 
-            // Triangle 1
+            // 4 vertices in a strip
             cellVertices[index + 0].position = {px, py};
             cellVertices[index + 1].position = {px + cellSize, py};
-            cellVertices[index + 2].position = {px + cellSize, py + cellSize};
-
-            // Triangle 2
-            cellVertices[index + 3].position = {px, py};
-            cellVertices[index + 4].position = {px + cellSize, py + cellSize};
-            cellVertices[index + 5].position = {px, py + cellSize};
+            cellVertices[index + 2].position = {px, py + cellSize};
+            cellVertices[index + 3].position = {px + cellSize, py + cellSize};
         }
     }
 }
