@@ -13,8 +13,9 @@ struct PerformanceMetrics {
     static constexpr size_t HISTORY = 120;
     std::deque<float> fpsHistory;
     std::deque<float> updateHistory;
+    std::deque<float> renderHistory;
 
-    void push(const float newFps, const float newUpdate)
+    void push(const float newFps, const float newUpdate, const float newRender)
     {
         auto pushDeque = [](std::deque<float>& d, const float v)
         {
@@ -24,6 +25,7 @@ struct PerformanceMetrics {
         
         pushDeque(fpsHistory,    newFps);
         pushDeque(updateHistory, newUpdate);
+        pushDeque(renderHistory, newRender);
     }
 };
 

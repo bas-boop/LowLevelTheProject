@@ -34,13 +34,20 @@ void ParticleWindow::drawMetricsOverlay()
 
     ImGui::Text("Particles : %zu", particleSystem.getParticleCount());
     ImGui::Text("FPS       : %6.1f  (avg %5.1f)", metrics.fps, dequeAvg(metrics.fpsHistory));
+    ImGui::Text("Frame     : %5.2f ms", metrics.frameMs);
     ImGui::Text("Update    : %5.2f ms  (avg %5.2f)", metrics.updateMs, dequeAvg(metrics.updateHistory));
+    ImGui::Text("Render    : %5.2f ms  (avg %5.2f)", metrics.renderMs, dequeAvg(metrics.renderHistory));
 
     {
         const std::vector<float> v = toVec(metrics.fpsHistory);
         ImGui::PlotLines("##fps", v.data(), static_cast<int>(v.size()), 0, "FPS", 0.f, 120.f, {262, 40});
     }
     
+    {
+        const std::vector<float> v = toVec(metrics.updateHistory);
+        ImGui::PlotLines("##upd", v.data(), static_cast<int>(v.size()), 0, "Update ms", 0.f, 5.f, {262, 30});
+    }
+
     ImGui::End();
 }
 
@@ -74,7 +81,9 @@ void ParticleWindow::run()
         drawMetricsOverlay();
         ImGui::SFML::Render(window);
         window.display();
-        metrics.push(metrics.fps, metrics.updateMs);
+        metrics.renderMs = phaseClock.restart().asMilliseconds();
+
+        metrics.push(metrics.fps, metrics.updateMs, metrics.renderMs);
     }
 
     ImGui::SFML::Shutdown();
@@ -84,10 +93,14 @@ void ParticleWindow::runOld()
 {
     sf::RenderWindow window(sf::VideoMode({800, 800}), "OLD Particle System Example");
     window.setFramerateLimit(60);
-    ParticleSystem particleSystem(&window);
-    particleSystem.spawnParticles(200, sf::Vector2f(400, 400));
+    ImGui::SFML::Init(window);
 
-    sf::Clock clock;
+    ParticleSystem particleSystem(&window);
+    particleSystem.spawnParticles(particleCount, sf::Vector2f(400, 400));
+
+    sf::Clock frameClock;
+    sf::Clock phaseClock;
+
     while (window.isOpen())
     {
         while (const std::optional event = window.pollEvent())
@@ -98,10 +111,23 @@ void ParticleWindow::runOld()
                 window.close();
         }
 
-        float deltaTime = clock.restart().asSeconds();
+        const float deltaTime = frameClock.restart().asSeconds();
+        metrics.frameMs = deltaTime * 1000.f;
+        metrics.fps = 1.f / deltaTime;
+
+        phaseClock.restart();
+        ImGui::SFML::Update(window, sf::seconds(deltaTime));
         particleSystem.update(deltaTime);
+        metrics.updateMs = phaseClock.restart().asMilliseconds();
+
+        metrics.renderMs = phaseClock.restart().asMilliseconds();
+        metrics.push(metrics.fps, metrics.updateMs, metrics.renderMs);
+        
+        phaseClock.restart();
         window.clear();
         particleSystem.render();
+        drawMetricsOverlay();
+        ImGui::SFML::Render(window);
         window.display();
     }
 

@@ -28,7 +28,7 @@ int main()
 	{
 		ParticleWindow particle;
 		particle.run();
-		//particle.runOld();
+		particle.runOld();
 	}
 
 	return 0;
